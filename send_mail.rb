@@ -13,7 +13,7 @@ class LocalTable < ActiveRecord::Base
       'Response code = 502',
       'Response code = 500',
       'Response code = 404',
-      'unknown attribute.*?primary_persona_flag_v2',
+      'unknown attribute `primary_persona_flag_v2`',
     ]
     type = failed_type.find{|e| /#{e}/ =~ log}
     type = type.nil? ? "unclassified error, id = #{self.id}" : type
@@ -94,7 +94,6 @@ def set_table(objects)
 end
 
 def set_body
-  # set_lmrs_table + set_lrs_table + set_frs_table
   str_body = ""
   [LawyerMatchRequest, LmbRequest, ForagerRequest].map{
     |model| 
@@ -115,7 +114,7 @@ def send_mail
   Mail.defaults { delivery_method :smtp, smtp }
   mail = Mail.new do
     from "autoforager.avvo@gmail.com"
-    to ["1076525788@qq.com","18582487349@163.com"]
+    to ["18582487349@163.com","yegang.avvo@gmail.com","hewang.cs@gmail.com"]
     subject "[#{Time.now}] Daily Sync Error Record"
     content_type 'text/html; charset=UTF-8'
     body set_body
