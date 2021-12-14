@@ -115,7 +115,7 @@ def send_mail
   mail = Mail.new do
     from "autoforager.avvo@gmail.com"
     to ["18582487349@163.com","yegang.avvo@gmail.com","hewang.cs@gmail.com"]
-    subject "[#{Time.now}] Daily Sync Error Record"
+    subject "[#{Date.today.strftime('%Y-%m-%d')}] Daily Sync Error Record"
     content_type 'text/html; charset=UTF-8'
     body set_body
   end
