@@ -16,8 +16,7 @@ class LocalTable < ActiveRecord::Base
       'unknown attribute `primary_persona_flag_v2`',
     ]
     type = failed_type.find{|e| /#{e}/ =~ log}
-    type = type.nil? ? "unclassified error, id = #{self.id}" : type
-    return type
+    return type.nil? ? "unclassified errors" : type
   end
 end
 
@@ -39,21 +38,22 @@ class ForagerRequest < LocalTable ; end
 ActiveRecord::Base.establish_connection(YAML.load_file("db.yml"))
 
 def set_tbody(objects)
-  body = ""
+  tbody = ""
   h = {}
-  unclassify_ids = []
   objects.each do |o|
-    if o.failed_type =~ /unclassified error.*?(\d+)/
-      unclassify_ids << $1
+    if h[o.failed_type]
+      h[o.failed_type][0] += 1
+      h[o.failed_type][1] << o.id
     else
-      h[o.failed_type] = h[o.failed_type] ? h[o.failed_type] + 1 : 1
+      h[o.failed_type] = [1, [o.id]]
     end
   end
+  return if h.empty?
+  h = h.sort_by {|k,v| [v[0], k]}.reverse.to_h
   h.each do |k,v|
-    body.concat("<tr><td>#{k}</td><td>#{v}</td></tr>")
+    tbody.concat("<tr><td>#{k}</td><td>#{v[0]}</td><td>#{v[1].size < 3 ? v[1].join('/') : v[1][0,3].join('/') + '/...'}</td></tr>")
   end
-  body.concat("<tr><td>unclassified error</td><td>#{unclassify_ids.size}[#{unclassify_ids.join(',')}]</td></tr>")
-  return body
+  return tbody
 end
 
 def set_css
@@ -68,26 +68,29 @@ def set_css
       .rtable td {padding: 6px 12px; border: 1px solid #d9d7ce;}  
       body {margin: 0;padding: 25px;color: #494b4d;font-size: 14px;line-height: 20px;}
       h1, h2, h3 {margin: 0 0 10px 0;color: #000000;}
-      h1 {font-size: 25px;line-height: 30px;}
+      h2 {font-size: 25px;line-height: 30px;}
       table {margin-bottom: 30px;}
       a {color: #ff6680;}
       code {background: #fffbcc;font-size: 12px;}
     </style>"
 end
 
-def set_table(objects)
-  puts "set size #{objects.size}"
+def set_table(klass)
+  objects = klass.where("status = 'failed' and updated_at > '#{8.day.ago}'")
+  tbody = set_tbody(objects)
+  return "<h2>#{klass.to_s}</h2><p>N/A</p>" if tbody.nil?
   <<-EOF
-    <h1>ForagerReqeust Failed Record</h1>
+    <h2>#{klass.to_s}</h2>
     <table class="rtable">
       <thead>
         <tr>
-          <th>Failed Type</th>
-          <th>Count</th>
+          <th>FAILED TYPE</th>
+          <th>COUNT</th>
+          <th>ID</th
         </tr>
       </thead>
       <tbody>
-        #{set_tbody(objects)}
+      #{tbody}
       </tbody>
     </table>
   EOF
@@ -97,7 +100,7 @@ def set_body
   str_body = ""
   [LawyerMatchRequest, LmbRequest, ForagerRequest].map{
     |model| 
-    str_body += set_table(model.where("status = 'failed' and updated_at > '#{8.day.ago}'"))
+    str_body += set_table(model)
   }
   return set_css + str_body
 end
@@ -115,9 +118,11 @@ def send_mail
   mail = Mail.new do
     from "autoforager.avvo@gmail.com"
     to ["18582487349@163.com","yegang.avvo@gmail.com","hewang.cs@gmail.com"]
-    subject "[#{Date.today.strftime('%Y-%m-%d')}] Daily Sync Error Record"
-    content_type 'text/html; charset=UTF-8'
-    body set_body
+    subject "[#{Date.today.strftime('%Y-%m-%d')}] Daily report for failed sync"
+    html_part do
+      content_type 'text/html; charset=UTF-8'
+      body set_body
+    end
   end
   mail.deliver!
 end
