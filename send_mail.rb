@@ -76,7 +76,7 @@ def set_css
 end
 
 def set_table(klass)
-  objects = klass.where("status = 'failed' and updated_at > '#{8.day.ago}'")
+  objects = klass.where("status = 'failed' and updated_at > '#{9.day.ago}'")
   tbody = set_tbody(objects)
   return "<h2>#{klass.to_s}</h2><p>N/A</p>" if tbody.nil?
   <<-EOF
@@ -105,6 +105,46 @@ def set_body
   return set_css + str_body
 end
 
+def cp_file_from_pod
+  puts 'cp_file_from_pod begin'
+  system("
+    cd /home/dyson/.kube;
+    kubectl config set-context --current --namespace=und-618;
+    kubectl cp martindale-interfaces-worker-foraged-data-to-mh-8ffdd9dc8-ks8vv:/srv/martindale-interfaces/log/foraged_data_to_mh_ec2.log /home/dyson/.kube/yh/foraged_data_to_mh_ec2.log;
+    ")
+  puts 'cp_file_from_pod end'
+end
+
+def set_log
+  cp_file_from_pod
+  debug_count = 0
+  pg_no_connection_error_count = 0
+  File.open('/home/dyson/.kube/yh/foraged_data_to_mh_ec2.log').each do |line|
+    debug_count += 1 if line =~ /^D,/i
+    pg_no_connection_error_count += 1 if line =~ /PG::UnableToSend: no connection to the server/
+  end
+  return "<h2>Foraged Data To Mh Log</h2><p>N/A</p>"
+  return <<-EOF
+    <h2>Foraged Data To Mh Log</h2>
+    <table class="rtable">
+      <thead>
+        <tr>
+          <th>FAILED TYPE</th>
+          <th>COUNT</th>
+        </tr>
+      </thead>
+      <tbody>
+      <tr>
+      <td>PG::UnableToSend: no connection to the server</td>
+      <td>#{pg_no_connection_error_count}</td>
+      <td>debug line</td>
+      <td>#{debug_count}</td>
+      <tr>
+      </tbody>
+    </table>
+  EOF
+end
+
 def send_mail
   smtp = { 
     :address => "smtp.gmail.com",
@@ -117,11 +157,12 @@ def send_mail
   Mail.defaults { delivery_method :smtp, smtp }
   mail = Mail.new do
     from "autoforager.avvo@gmail.com"
-    to ["18582487349@163.com","yegang.avvo@gmail.com","hewang.cs@gmail.com"]
+    # to ["18582487349@163.com","yegang.avvo@gmail.com","hewang.cs@gmail.com"]
+    to ["18582487349@163.com"]
     subject "[#{Date.today.strftime('%Y-%m-%d')}] Daily report for failed sync"
     html_part do
       content_type 'text/html; charset=UTF-8'
-      body set_body
+      body set_log + set_body
     end
   end
   mail.deliver!
