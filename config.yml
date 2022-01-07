@@ -1,0 +1,20 @@
+db:
+  pool: 99
+  adapter: postgresql
+  username: lmbserviceuser
+  password: IknTDdLm@all
+  database: universal_db
+  schema_search_path: legal
+  host: ibmhpgdb1.internetbrands.com
+  port: 5432
+
+smtp:
+  :address: smtp.gmail.com
+  :port: 587,
+  :domain: gmail.com
+  :user_name: autoforager.avvo@gmail.com
+  :password: avvo.com2
+  :enable_starttls_auto: true
+
+to: 
+  ["18582487349@163.com","yegang.avvo@gmail.com","hewang.cs@gmail.com"]

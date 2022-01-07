@@ -1,8 +1,0 @@
-pool: 99
-adapter: postgresql
-username: postgres
-password: 
-database: universal_db
-schema_search_path: legal
-host: localhost
-port: 54321
